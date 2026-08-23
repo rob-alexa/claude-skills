@@ -276,6 +276,18 @@ Query the related record as its own Get Records, filtered on `GET_Running_User.M
 `{!GET_Manager.Name}`. A field that lives directly on the queried record, like `ManagerId` itself, works
 fine, which is why a surrounding visibility rule can keep working while only the name is blank.
 
+### The same blank appears spanning `$Record` to an audit user
+
+In a record-triggered flow, spanning from `$Record` to an audit-user relationship for its name renders
+**blank** in emails and text templates, even though the underlying Id field is set. The related User is
+not hydrated on the triggering record. It hits `{!$Record.LastModifiedBy.Name}`,
+`{!$Record.CreatedBy.Name}`, and `{!$Record.Owner.Name}` alike, while custom-lookup spans such as
+`{!$Record.My_Parent__r.Name}` resolve fine, which is what makes it look arbitrary.
+
+For "who performed the action" in a record-triggered flow, use the running-user global
+`{!$User.FirstName} {!$User.LastName}` instead. The running user is whoever did the DML that fired the
+flow. This surfaced on a job-completed notification whose "Completed by" line was empty in every email.
+
 ---
 
 ## A picklist default applies only to records created after the field exists

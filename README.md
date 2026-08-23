@@ -1,14 +1,15 @@
 # Claude Code skills from real delivery work
 
-Ten [Agent Skills](https://code.claude.com/docs/en/skills) extracted from a working Salesforce delivery
-repo and de-identified for public use. Six are Salesforce platform knowledge, one is Jira Cloud, and
-three are working methods that are not platform-specific.
+Eleven [Agent Skills](https://code.claude.com/docs/en/skills) extracted from a working Salesforce
+delivery repo and de-identified for public use. Seven are Salesforce platform knowledge, one is Jira
+Cloud, and three are working methods that are not platform-specific.
 
 ## Salesforce
 
 | Skill | What it does |
 |---|---|
 | [`salesforce-flow-and-ui-defects`](skills/salesforce-flow-and-ui-defects/SKILL.md) | Catalogs the Flow and Lightning failures that pass a clean deploy and surface only on screen, with the cause and the fix for each: the 15-against-18-character `$User.Id` comparison, a blank cross-object merge field, a picklist default that reaches no existing record, an LWC missing from phones, a layout-fed related-list tab, an orchestration Resource that wants a Username, and a validation rule that rolls back the record it guards. Also covers how to exercise a screen flow whose Submit is destructive |
+| [`salesforce-flow-versions`](skills/salesforce-flow-versions/SKILL.md) | Establishes which version of a flow an org is actually running, since source status, a deploy result, a retrieve, and `FlowDefinitionView` each report on a different one. Covers activation and deactivation, the three routes to an `InvalidDraft` that deployed green, deleting a flow safely, why a dependency query returning nothing does not mean a field is safe to delete, and why a running orchestration keeps the stages it started on |
 | [`salesforce-data-loading`](skills/salesforce-data-loading/SKILL.md) | Walks the design of a bulk load: which describe flags decide the approach before you build the file, the two permissions that let a load set audit fields and inactive owners, how to derive an undecided value from records that already carry it, and the four operations that report success while doing something other than what you meant |
 | [`salesforce-user-automation`](skills/salesforce-user-automation/SKILL.md) | Explains why automation touching `User` alongside any non-setup object breaks, and how to structure it so it does not: the async path, the chained Queueable, and tests that actually exercise the collision. Also covers `User` fields that describe as nonexistent, and querying Chatter membership without silently dropping inactive members |
 | [`salesforce-business-days`](skills/salesforce-business-days/SKILL.md) | Sets up Business Hours properly: how to measure what a set really is, since the metadata cannot tell you, a two-set design that lets holiday-aware and holiday-blind automation coexist, the deploy semantics for holidays, and when business-day math needs Apex rather than a plain `TODAY() + 7` |
@@ -44,7 +45,7 @@ cp -r skills/design-grilling .claude/skills/
 ```
 
 Claude Code loads each skill's `description` on every request and the body only when the description
-matches what you are doing, so install the ones you will use rather than all ten out of habit.
+matches what you are doing, so install the ones you will use rather than all eleven out of habit.
 
 ## What was changed on the way out
 
@@ -60,5 +61,5 @@ frontier of decisions tuned to that estate, which the skill tells you to replace
 
 ## Attribution and license
 
-MIT. Three of the ten are adaptations of Matt Pocock's MIT-licensed skills; see [NOTICE.md](NOTICE.md)
+MIT. Three of the eleven are adaptations of Matt Pocock's MIT-licensed skills; see [NOTICE.md](NOTICE.md)
 for what came from where and what changed.
