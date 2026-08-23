@@ -92,6 +92,23 @@ The saving comes from the fresh context, not from the file. Hand off, end the se
 one pointed at the handoff. Carrying on in the same conversation after writing one pays the full
 re-read and gains nothing.
 
-If your harness can surface the per-turn token figure, wire it to say so at a few thresholds rather
-than blocking. What that removes is the part where nobody could see the number; the decision to stop
-stays the user's.
+If your harness can surface the per-turn token figure, wire it to say so rather than to block. What
+that removes is the part where nobody could see the number; the decision to stop stays the user's.
+
+**Three absolute token thresholds work well, each firing once and escalating:** 200K as a notice,
+300K to offer a handoff, and 400K to say plainly that continuing is the expensive choice and stop.
+Make them absolute counts rather than a percentage of anything, so they mean the same thing for a
+light user and a heavy one.
+
+To check them against your own usage, the curve they came from averaged 199K at turn 50, 287K at
+turn 100, and 435K at turn 200, which puts the three lines near turns 50, 110, and 180. Growth ran
+about 1.5K per turn, so 100K of headroom is roughly 65 turns.
+
+**Measure your own before adopting these.** They come from one person's sessions, and that person is
+the heaviest user of the repo they were measured in. The mean and median tracked closely at every
+turn sampled, so they are not distorted by outliers, but they still describe one curve.
+
+Two things that measurement settled, and both were wrong beforehand. **A first threshold at 150K was
+too early**: it landed around turn 25, before most sessions have done anything, so the honest
+response to it was always "nothing to do yet". And **a top threshold at 500K was far too late**, at
+somewhere past turn 250, by which point the expensive turns have already been paid for.
