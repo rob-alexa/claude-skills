@@ -4,11 +4,6 @@ Ten [Agent Skills](https://code.claude.com/docs/en/skills) extracted from a work
 repo and de-identified for public use. Six are Salesforce platform knowledge, one is Jira Cloud, and
 three are working methods that are not platform-specific.
 
-Every one of them exists because something went wrong first, and most of the failures share a shape:
-the deploy is green, the job reports success, the status code says `204`, and the defect is somewhere
-else entirely. That is what the skills are organized around — the checks that tell you what actually
-happened, rather than what was accepted.
-
 ## Salesforce
 
 | Skill | What it prevents |
