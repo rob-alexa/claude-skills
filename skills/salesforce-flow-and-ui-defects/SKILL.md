@@ -128,7 +128,7 @@ edit pencil, so they change the value and only the **save** refuses them, which 
 rather than as a restriction.
 
 In the recorded case one page was hand-built in App Builder in a sandbox and left at `none` there while
-the branch source correctly said `readonly`, and a tester hit it inside twenty minutes. Two
+the branch source correctly said `readonly`, and a tester hit it inside 20 minutes. Two
 consequences: the QA step that checks for the absence of a pencil passes or fails on this one property,
 and **deploying the branch is what gets it right**. Check both instances after any hand edit:
 

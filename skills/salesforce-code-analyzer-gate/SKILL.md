@@ -48,7 +48,7 @@ current config into it as a deliberate step.
 **The test to apply before making any check required is who trips it and whether they can clear it
 themselves.**
 
-One team made it required and took it back off ninety minutes later. In that window it blocked a PR on
+One team made it required and took it back off 90 minutes later. In that window it blocked a PR on
 six findings that were already reviewed and justified, and that the author had not introduced. She had
 no way to diagnose or clear it. The rollout note that already existed, report-only until the
 changed-file baseline is clean, was right, and enforcing early is what ignored it.
@@ -93,7 +93,7 @@ Most only reach LWC and JavaScript. Three bite Apex: **`ApexCRUDViolation`**,
 It fires on **any SOQL or DML with no explicit mode**, so essentially every new Apex class that touches
 the database trips the gate until it says which mode it wants.
 
-Verified on a brand-new invocable: it failed on that single severity-2 finding, while ten severity-3
+Verified on a brand-new invocable: it failed on that single severity-2 finding, while 10 severity-3
 and severity-4 findings in the same two files (ApexDoc, a cyclomatic complexity of 11, and
 `ApexUnitTestClassShouldHaveRunAs`) were reported and ignored.
 
