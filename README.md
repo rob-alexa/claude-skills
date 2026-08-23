@@ -20,7 +20,7 @@ Jira, and 3 working methods that are not platform-specific.
 
 | Skill | What it does |
 |---|---|
-| [`jira-rest-writes`](skills/jira-rest-writes/SKILL.md) | REST recipes for every Jira Cloud write, each paired with the read-back that confirms it: create, edit, comment, transition, assign, link, sprint, and Story Points. Covers building ADF documents, resolving an assignable account on a site that also runs Service Management, and which fields have to go in a call of their own. Includes [`jira-text-to-adf.py`](skills/jira-rest-writes/jira-text-to-adf.py) |
+| [`jira-rest-writes`](skills/jira-rest-writes/SKILL.md) | REST recipes for every Jira Cloud write, each paired with the read-back that confirms it: create, edit, comment, transition, assign, link, sprint, and Story Points. Covers building ADF documents, resolving an assignable account on a site that also runs Service Management, and which fields have to go in a call of their own. Ships with a converter that turns plain text into the ADF payload the endpoints expect, so paragraphs, bullets, and numbered lists survive instead of flattening into a single block |
 | [`qa-handoff`](skills/qa-handoff/SKILL.md) | Writes a QA sub-task a tester can act on without you: numbered one-check-per-step guidance, the field combination that drives the behavior rather than fixture record Ids that drift, screenshots placed at the step they illustrate, desktop and phone captures, and the order to create and transition sub-tasks in so Jira automation does not close the parent out from under you |
 
 ## Working methods
