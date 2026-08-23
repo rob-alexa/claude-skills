@@ -55,8 +55,8 @@ identifiers, and organization-specific references removed.
 What stayed is the mechanism and the evidence for it. Where a claim rests on a single measurement it
 says so, and where a cause was never established it says that too rather than offering a tidy
 explanation. The measurements come from real environments during 2026, but all from one organization,
-so verify anything you plan to rely on against your own. And `design-grilling` closes with a list of Salesforce
-decisions drawn from that same source, which the skill tells you to replace with your own.
+so verify anything you plan to rely on against your own. And `design-grilling` closes with a list of
+Salesforce decisions drawn from that same source, which the skill tells you to replace with your own.
 
 ## Attribution and license
 
