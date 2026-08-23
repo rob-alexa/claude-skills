@@ -45,7 +45,7 @@ cp -r skills/design-grilling .claude/skills/
 ```
 
 Claude Code loads each skill's `description` on every request and the body only when the description
-matches what you are doing, so install the ones you will use rather than all eleven out of habit.
+matches what you are doing, so install the ones you will use rather than all 11 out of habit.
 
 ## What was changed on the way out
 
@@ -61,5 +61,5 @@ frontier of decisions tuned to that estate, which the skill tells you to replace
 
 ## Attribution and license
 
-MIT. Three of the eleven are adaptations of Matt Pocock's MIT-licensed skills; see [NOTICE.md](NOTICE.md)
+MIT. Three of the 11 are adaptations of Matt Pocock's MIT-licensed skills; see [NOTICE.md](NOTICE.md)
 for what came from where and what changed.
