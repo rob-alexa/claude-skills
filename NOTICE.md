@@ -1,7 +1,7 @@
 # Attribution
 
 Three skills in this collection are adaptations of skills published by Matt Pocock at
-https://github.com/mattpocock/skills, under the MIT License, `Copyright (c) 2026 Matt Pocock`.
+https://github.com/mattpocock/skills, under the MIT License.
 
 | Skill here | Adapted from | What changed |
 |---|---|---|
@@ -9,5 +9,31 @@ https://github.com/mattpocock/skills, under the MIT License, `Copyright (c) 2026
 | `session-handoff` | `handoff` | Storage moved from the OS temporary directory to a task folder that survives, since the value shows up days later. Added the context-cost argument, the four fixed sections, and the naming rule |
 | `stakeholder-questionnaire` | `to-questionnaire` | Output moved from a bare Markdown file to a formatted document a non-technical reader will open, and the "ask nothing only answerable in a tool the recipient does not use" constraint |
 
-His MIT license grant is reproduced in `LICENSE` alongside this collection's own. The two remaining
-skills, `salesforce-user-automation` and `salesforce-files-queries`, are original work.
+The two remaining skills, `salesforce-user-automation` and `salesforce-files-queries`, are original
+work and are covered by [LICENSE](LICENSE).
+
+## Upstream license, reproduced in full
+
+```
+MIT License
+
+Copyright (c) 2026 Matt Pocock
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
