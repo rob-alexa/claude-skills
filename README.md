@@ -6,28 +6,28 @@ three are working methods that are not platform-specific.
 
 ## Salesforce
 
-| Skill | What it prevents |
+| Skill | What it does |
 |---|---|
-| [`salesforce-flow-and-ui-defects`](skills/salesforce-flow-and-ui-defects/SKILL.md) | Defects that deploy clean and fail only on screen: `$User.Id` being 15 characters against an 18-character lookup so a decision never matches, a blank cross-object merge field, a picklist default that applies to no existing record, an LWC invisible on phones, a related-list tab that renders empty, an orchestration that needs a Username where you gave it an Id, and a validation rule that rolls back the record it was protecting |
-| [`salesforce-data-loading`](skills/salesforce-data-loading/SKILL.md) | A migration that lands stamped with the loading user and the load date, which no later update can correct, a blanking load that reports success without clearing anything, and a row count that is wrong because long text contains newlines |
-| [`salesforce-user-automation`](skills/salesforce-user-automation/SKILL.md) | Mixed DML on the `User` object: an automation that works on insert and breaks user activation on update, a reconcile job reporting `Completed, NumberOfErrors=0` while doing nothing, a `User` field that deploys but reads as nonexistent, and a membership query that confirms a removal that never happened |
-| [`salesforce-business-days`](skills/salesforce-business-days/SKILL.md) | A "Default" Business Hours set that is quietly 24/7, a holiday list a deploy silently replaces, a set rename that creates a second set you cannot delete, and reaching for Apex when `TODAY() + 7` is exact |
-| [`salesforce-code-analyzer-gate`](skills/salesforce-code-analyzer-gate/SKILL.md) | A red Code Analyzer check caused by your branch's config vintage rather than your code, `ApexCRUDViolation` on every new class, whole-file findings you did not write, and the Windows locale bug that surfaces as a Critical engine error |
-| [`salesforce-files-queries`](skills/salesforce-files-queries/SKILL.md) | An unfiltered `ContentVersion` sweep that under-returns, whose `COUNT` agrees with the wrong number because both travel the same access path |
+| [`salesforce-flow-and-ui-defects`](skills/salesforce-flow-and-ui-defects/SKILL.md) | Catalogs the Flow and Lightning failures that pass a clean deploy and surface only on screen, with the cause and the fix for each: the 15-against-18-character `$User.Id` comparison, a blank cross-object merge field, a picklist default that reaches no existing record, an LWC missing from phones, a layout-fed related-list tab, an orchestration Resource that wants a Username, and a validation rule that rolls back the record it guards. Also covers how to exercise a screen flow whose Submit is destructive |
+| [`salesforce-data-loading`](skills/salesforce-data-loading/SKILL.md) | Walks the design of a bulk load: which describe flags decide the approach before you build the file, the two permissions that let a load set audit fields and inactive owners, how to derive an undecided value from records that already carry it, and the four operations that report success while doing something other than what you meant |
+| [`salesforce-user-automation`](skills/salesforce-user-automation/SKILL.md) | Explains why automation touching `User` alongside any non-setup object breaks, and how to structure it so it does not: the async path, the chained Queueable, and tests that actually exercise the collision. Also covers `User` fields that describe as nonexistent, and querying Chatter membership without silently dropping inactive members |
+| [`salesforce-business-days`](skills/salesforce-business-days/SKILL.md) | Sets up Business Hours properly: how to measure what a set really is, since the metadata cannot tell you, a two-set design that lets holiday-aware and holiday-blind automation coexist, the deploy semantics for holidays, and when business-day math needs Apex rather than a plain `TODAY() + 7` |
+| [`salesforce-code-analyzer-gate`](skills/salesforce-code-analyzer-gate/SKILL.md) | Diagnoses a red Code Analyzer check: which rules can fail the job rather than report, what `ApexCRUDViolation` is asking for, when a finding comes from your branch's config vintage rather than your code, and how to force a check to re-run without dismissing an approval. Includes the Windows locale fix for the flow engine |
+| [`salesforce-files-queries`](skills/salesforce-files-queries/SKILL.md) | Builds a file population from `ContentDocumentLink` rather than a `ContentVersion` sweep, explains why the obvious sanity check confirms the wrong number, and says where to chunk a long `IN` list |
 
 ## Jira
 
-| Skill | What it prevents |
+| Skill | What it does |
 |---|---|
-| [`jira-rest-writes`](skills/jira-rest-writes/SKILL.md) | Writes that return `201`/`204` and store the wrong thing: prose flattened into a single ADF node, an assignment resolved to a non-assignable service-desk account, a duplicate link recorded backwards, a resolution silently left as `Done`, and `/editmeta` reporting a field unwritable when the write succeeds. Includes [`jira-text-to-adf.py`](skills/jira-rest-writes/jira-text-to-adf.py) |
+| [`jira-rest-writes`](skills/jira-rest-writes/SKILL.md) | REST recipes for every Jira Cloud write, each paired with the read-back that confirms it: create, edit, comment, transition, assign, link, sprint, and Story Points. Covers building ADF documents, resolving an assignable account on a site that also runs Service Management, and which fields have to go in a call of their own. Includes [`jira-text-to-adf.py`](skills/jira-rest-writes/jira-text-to-adf.py) |
 
 ## Working methods
 
-| Skill | What it prevents |
+| Skill | What it does |
 |---|---|
-| [`design-grilling`](skills/design-grilling/SKILL.md) | A build that is internally coherent, carefully specified, and answering a question nobody ever confirmed. Works the open decisions as a tree, in rounds, recommending an answer to each |
-| [`session-handoff`](skills/session-handoff/SKILL.md) | A fresh session re-solving what the last one settled, and the compounding token cost of never starting a fresh one |
-| [`stakeholder-questionnaire`](skills/stakeholder-questionnaire/SKILL.md) | A questionnaire that asks its own author's questions back at them, or that asks a business reader something only answerable in git |
+| [`design-grilling`](skills/design-grilling/SKILL.md) | Works the open decisions on a piece of work as a tree, in rounds, putting the whole frontier at once with a recommended answer to each, and separates the facts you should look up yourself from the decisions only a person can make |
+| [`session-handoff`](skills/session-handoff/SKILL.md) | A four-section handoff file per task, and the rule for when to read and write one, so a fresh session continues the work rather than re-deriving it |
+| [`stakeholder-questionnaire`](skills/stakeholder-questionnaire/SKILL.md) | Turns questions you cannot answer into one document a named colleague fills in, by interviewing whoever is directing the work about the send rather than about the subject |
 
 ## Install
 
