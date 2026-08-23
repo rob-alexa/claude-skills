@@ -28,7 +28,7 @@ Jira, and 3 working methods that are not platform-specific.
 | Skill | What it does |
 |---|---|
 | [`design-grilling`](skills/design-grilling/SKILL.md) | Works the open decisions on a piece of work as a tree, in rounds, putting the whole frontier at once with a recommended answer to each, and separates the facts you should look up yourself from the decisions only a person can make. |
-| [`session-handoff`](skills/session-handoff/SKILL.md) | A four-section handoff file per task, and the rule for when to read and write one, so a fresh session continues the work rather than re-deriving it. |
+| [`session-handoff`](skills/session-handoff/SKILL.md) | A four-section handoff file per task, and the rule for when to read and write one, so a fresh session continues the work rather than re-deriving it. Carries the cost case for actually stopping: re-read context is billed every turn, so it compounds with position, and in one team's measured usage a request past turn 200 re-read 619K tokens against 24.8K at turn 1, with 47.7% of all spend sitting past turn 100. |
 | [`stakeholder-questionnaire`](skills/stakeholder-questionnaire/SKILL.md) | Turns questions you cannot answer into one document a named colleague fills in, by interviewing whoever is directing the work about the send rather than about the subject. |
 
 ## Install
