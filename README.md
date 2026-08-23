@@ -49,15 +49,14 @@ matches what you are doing, so install the ones you will use rather than all 11 
 
 ## What was changed on the way out
 
-These came from a private repo for one Salesforce org running a managed package. Removing that context
-meant taking out employee and vendor names, org aliases and record counts, internal ticket keys and
-repository paths, and links to project instructions that do not exist outside that repo.
+These were written for day-to-day Salesforce delivery work and rewritten for general use, with names,
+identifiers, and organization-specific references removed.
 
 What stayed is the mechanism and the evidence for it. Where a claim rests on a single measurement it
 says so, and where a cause was never established it says that too rather than offering a tidy
-explanation. Two things follow. Anything stated as measured was measured on real orgs during 2026, on
-one estate, so verify it against yours before relying on it. And `design-grilling` carries a standing
-frontier of decisions tuned to that estate, which the skill tells you to replace with your own.
+explanation. The measurements come from real orgs during 2026, but from one place only, so verify
+anything you plan to rely on against your own. And `design-grilling` closes with a list of Salesforce
+decisions drawn from that same source, which the skill tells you to replace with your own.
 
 ## Attribution and license
 
