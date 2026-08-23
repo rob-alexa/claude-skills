@@ -1,8 +1,8 @@
 # Claude Code skills from real delivery work
 
 A collection of 11 [Agent Skills](https://code.claude.com/docs/en/skills) extracted from a working
-Salesforce delivery repo and de-identified for public use. Seven are Salesforce platform knowledge,
-one is Jira Cloud, and three are working methods that are not platform-specific.
+Salesforce delivery repo and de-identified for public use: 7 on Salesforce platform knowledge, 1 on
+Jira Cloud, and 3 working methods that are not platform-specific.
 
 ## Salesforce
 
