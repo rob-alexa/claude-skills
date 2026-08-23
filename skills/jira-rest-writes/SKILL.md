@@ -57,6 +57,17 @@ agile API for boards and sprints.
 **Every write is confirmed by reading it back, never by the status code.** A `204` means the call was
 accepted, and several of the traps below produce a `204` alongside the wrong stored value.
 
+**But a read-back fired a second or two after a transition can return the PRE-automation state.** The
+`GET` is truthful and already stale, which is how a transition that an Automation for Jira rule
+reverted two seconds later was first reported as a success. Wait about 20 seconds anywhere a rule
+might fire, and where you need to know what actually happened rather than what is true now, read the
+**changelog** rather than the current status:
+
+```bash
+curl -s --netrc "$S/rest/api/3/issue/PROJ-177/changelog" \
+  | jq -r '.values[] | .created + "  " + (.items[] | "\(.field): \(.fromString) -> \(.toString)")'
+```
+
 ## Common operations
 
 ```bash

@@ -1,8 +1,8 @@
 # Claude Code skills from real delivery work
 
-A collection of 11 [skills](https://code.claude.com/docs/en/skills) extracted from a working
-Salesforce delivery repo and de-identified for public use: 7 on Salesforce platform knowledge, 1 on
-Jira Cloud, and 3 working methods that are not platform-specific.
+A collection of 12 [skills](https://code.claude.com/docs/en/skills) extracted from a working
+Salesforce delivery repo and de-identified for public use: 7 on Salesforce platform knowledge, 2 on
+Jira, and 3 working methods that are not platform-specific.
 
 ## Salesforce
 
@@ -21,6 +21,7 @@ Jira Cloud, and 3 working methods that are not platform-specific.
 | Skill | What it does |
 |---|---|
 | [`jira-rest-writes`](skills/jira-rest-writes/SKILL.md) | REST recipes for every Jira Cloud write, each paired with the read-back that confirms it: create, edit, comment, transition, assign, link, sprint, and Story Points. Covers building ADF documents, resolving an assignable account on a site that also runs Service Management, and which fields have to go in a call of their own. Includes [`jira-text-to-adf.py`](skills/jira-rest-writes/jira-text-to-adf.py) |
+| [`qa-handoff`](skills/qa-handoff/SKILL.md) | Writes a QA sub-task a tester can act on without you: numbered one-check-per-step guidance, the field combination that drives the behavior rather than fixture record Ids that drift, screenshots placed at the step they illustrate, desktop and phone captures, and the order to create and transition sub-tasks in so Jira automation does not close the parent out from under you |
 
 ## Working methods
 
@@ -45,7 +46,7 @@ cp -r skills/design-grilling .claude/skills/
 ```
 
 Claude Code loads each skill's `description` on every request and the body only when the description
-matches what you are doing, so install the ones you will use rather than all 11 out of habit.
+matches what you are doing, so install the ones you will use rather than all 12 out of habit.
 
 ## What was changed on the way out
 
@@ -60,5 +61,5 @@ Salesforce decisions drawn from that same source, which the skill tells you to r
 
 ## Attribution and license
 
-MIT. Three of the 11 are adaptations of Matt Pocock's MIT-licensed skills; see [NOTICE.md](NOTICE.md)
+MIT. Three of the 12 are adaptations of Matt Pocock's MIT-licensed skills; see [NOTICE.md](NOTICE.md)
 for what came from where and what changed.
