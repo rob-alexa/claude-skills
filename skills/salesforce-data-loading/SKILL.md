@@ -2,7 +2,7 @@
 name: salesforce-data-loading
 description: "Bulk data loads in Salesforce. TRIGGER when: designing or running an sf data import/upsert/update, building a load CSV, counting rows in a CSV export, checking loaded records against a source file, loading records owned by a departed user, or DUPLICATE_VALUE / INACTIVE_OWNER_OR_USER / LineEnding / 'Field name not found' / Too many SOQL queries errors. Not for deleting records."
 metadata:
-  version: "1.1"
+  version: "1.2"
   license: MIT
 ---
 
@@ -403,6 +403,17 @@ fields Unique on the assumption of one file per document.
 Removing Unique costs the upsert key, since a non-unique external id fails an upsert whenever more than
 one record matches, so such loads have to key off `Id` instead. Decide that consciously rather than
 discovering it.
+
+**Read `caseSensitive` beside it.** A unique text field that is not case-sensitive treats values
+that differ only in letter case as the same value, which is why a unique field holding record Ids
+should carry the 18-character form: two 15-character Ids can differ only in case. That comes from a
+design review's reasoning, not from a measured load, so put a small batch through before a large
+one. One line lists every unique field on an object with both flags:
+
+```bash
+sf sobject describe --sobject <API> --json | jq -r '.result.fields[] | select(.unique)
+  | "\(.name) externalId=\(.externalId) caseSensitive=\(.caseSensitive)"'
+```
 
 ---
 

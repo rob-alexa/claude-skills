@@ -1,8 +1,8 @@
 ---
 name: salesforce-metadata-deploy
-description: "Reading a Salesforce metadata deploy result, and the deploys that succeed while landing nothing or while removing something from the org. TRIGGER when: reading a deploy result or its componentSuccesses, deploying a permission set, permission set group, or profile, redeploying an LWC or Aura bundle, 'This schedulable class has jobs pending or in progress', a field delete blocked by a Lightning page, or a change that deployed green is missing from the org. Not for picklist values (salesforce-picklist-changes)."
+description: "Reading a Salesforce metadata deploy result, and the deploys that succeed while landing nothing or while removing something from the org. TRIGGER when: reading a deploy result or its componentSuccesses, deploying a permission set, permission set group, profile, or External Client App, redeploying an LWC or Aura bundle, 'This schedulable class has jobs pending or in progress' or 'is duplicated at this location', deleting or restoring a field, converting a Text Area to a Long Text Area, or a change that deployed green is missing from the org. Not for picklist values (salesforce-picklist-changes)."
 metadata:
-  version: "1.0"
+  version: "1.1"
   license: MIT
 ---
 
@@ -64,6 +64,29 @@ Four traps in that JSON, each met in practice:
   both are zero on a payload that was not empty, the deploy touched nothing, whatever its status
   says.
 
+**A failed deploy has once been seen leaving permission set entries stripped.** A sandbox took two
+failed deploys, each bundling a constructive change with a field delete and each rolled back whole,
+and afterward one permission set had lost its entire section for the object being changed: the
+object permission and both field permissions. A second sandbox took the identical constructive
+payload with no failed deploy and kept all three, and the components themselves rolled back
+correctly in both. It was seen once and never reproduced, so it is an observation, not an
+established mechanism. Check for it after a failed deploy anyway, because the symptom points
+somewhere else: a field with no field-level security is missing from `sf sobject describe` and fails
+Apex compilation with *"No such column"*, while `sf org list metadata --metadata-type CustomField`
+still lists it, so it reads as a failed or half-finished delete instead of lost access. Read the
+grants before redeploying anything:
+
+```bash
+sf data query --query "SELECT Field, Parent.Name, PermissionsRead, PermissionsEdit
+  FROM FieldPermissions WHERE SobjectType = '<Object__c>'"
+```
+
+The repair used was redeploying the permission set from source control. That replaces the whole set,
+so first check what the org holds that the file lacks (the permission set section), or insert the
+lost rows one at a time instead. If users reach the set through a permission set group, the restored
+grant does not apply until the group's `Status` reads `Updated`, and a describe run before then
+still cannot see the field, which looks exactly like the repair having failed.
+
 ---
 
 ## A permission set deploy replaces the set; a profile deploy merges
@@ -101,6 +124,25 @@ Four traps in that JSON, each met in practice:
   let the group re-aggregate. Until the group's `Status` reads `Updated`, a check through the group
   still shows the old access.
 
+**Two ways a complete file fails to deploy.** Both fail loudly and land nothing:
+
+- **A stale file fails on the first reference the target org lacks.** A full file taken from another
+  org, or an old retrieve, can name fields, objects, or record types the target does not have, and
+  the deploy fails whole on the first one. It reports only that first one, so fixing it exposes the
+  next, which reads as a new regression; find every bad reference before deploying again. Settle
+  whether a field exists with `sf org list metadata --metadata-type CustomField`, not with
+  `sf sobject describe` or a `FieldDefinition` query: both hide a real field you hold no field-level
+  security on, so they report it as absent, and stripping it on their word removes a real grant. For
+  objects, an `EntityDefinition` query has come back empty for objects that exist, so trust the
+  describe there.
+- **Each element type has to be one contiguous run**: every `fieldPermissions` entry together, every
+  `objectPermissions` entry together, and so on. An entry outside its type's run fails the deploy
+  with *"element X is duplicated at this location"*. When adding entries by hand, append each after
+  the last existing block of its type instead of re-sorting the region: measured, that kept a
+  70-entry repair to a 645-line addition, where re-sorting would have reshuffled 14,000 lines. A
+  check-only deploy of the result reports the permission set `changed=false` when the file matches
+  the org exactly.
+
 ---
 
 ## A permission set group's member list is replaced the same way
@@ -127,6 +169,42 @@ sf data query --query "SELECT Assignee.Username FROM PermissionSetAssignment
 
 To add one member without deploying the membership file, insert a `PermissionSetGroupComponent` row,
 which leaves the rest of the group alone. That route was used in a sandbox in 2026.
+
+**A holder count overstates the loss when the removed member is a package permission set that works
+only when assigned directly.** A managed package can gate a feature on the user's own
+`PermissionSetAssignment` row for its permission set. An assignment that arrives through a group
+names the group's own aggregate permission set, never its members, so group membership never
+satisfied that gate, and the users who rely on it hold the set directly. Measured: a sandbox's group
+held three package permission sets that the file lacked, the holder count said up to 75 active users
+would lose access, and all three turned out redundant, because everyone who needed them held them
+directly. So before a large count argues against a correct deploy, count the direct assignments,
+which a query on the member's own name returns alone:
+
+```bash
+sf data query --query "SELECT Assignee.Username FROM PermissionSetAssignment
+  WHERE PermissionSet.Name = '<PackagePermissionSet>' AND Assignee.IsActive = true"
+```
+
+The same gate cuts the other way: never remove such a direct assignment, or fold it into a group, on
+the grounds that a group already grants the same access. Every permission check still passes while
+the feature stops working. In the cases seen, a packaged component refused with *"you may not have
+permission to view this page"* while object access, field-level security, and the license were all
+in place, and the managed debug log showed only a `COUNT()` on `PermissionSetAssignment` returning
+no rows.
+
+**A member that is a managed package's permission set fails every org without that package.** A
+group's member list is checked against the target org, so where the package is not installed the
+group fails with:
+
+```
+Cannot create Permission Set Group Components since the following permission set names are invalid: <name>
+```
+
+A deploy is atomic, so that one member rolls back the rest of the payload with it. Measured: a
+package installed in production, with its permission set tracked as a member of a group in source,
+failed the first sync into a sandbox that lacked the package. Install the package in every org the
+group deploys to. Dropping the member from your file instead is the wrong fix: the next deploy of
+the group to production removes it there.
 
 ---
 
@@ -230,6 +308,98 @@ sequence is in `salesforce-flow-versions`.
 
 ---
 
+## Deleting a field: which layouts can name it, and how long it stays restorable
+
+**A layout last modified before a field was created cannot reference it.** That makes a cheap proof
+when you need to know whether any page layout names a field you are deleting.
+`sf org list metadata --metadata-type Layout` returns every layout with its `lastModifiedDate`, and
+the field's `CreatedDate` is on its Tooling `CustomField` row (`FieldDefinition` carries none). One
+listing settled the question for a production delete in 2026.
+
+```bash
+sf org list metadata --metadata-type Layout --json \
+  | jq -r '.result[] | "\(.lastModifiedDate)  \(.fullName)"' | sort
+sf data query --use-tooling-api --query "SELECT DeveloperName, CreatedDate FROM CustomField
+  WHERE Id = '<00N...>'"
+```
+
+It proves one direction only. A layout modified after the field was created might or might not name
+it, so retrieve those and look. And a managed package's components can carry the package's install
+stamp instead of any edit date (measured on Lightning components, where hundreds from one package
+shared one `LastModifiedDate`), so on a managed layout look at how the dates spread across the
+package before reading anything into one of them.
+
+**A deleted custom field stays restorable, with its data, for about 15 days**, from the Deleted
+Fields page on its object in Setup. Say so when proposing a delete, since it lowers the stakes of
+the decision. The field's Tooling `CustomField` row stays behind, its `DeveloperName` given a `_del`
+suffix (seen in a sandbox: `My_Field__c` shows as `My_Field_del`), with no `IsDeleted` flag and a
+`ManageableState` reading `unmanaged` exactly as a live field's does. The row outlives the restore
+window, since one count found rows for fields deleted 26 days earlier, so it is not by itself
+evidence that a field can still be restored. It also inflates a field inventory: that count returned
+18 fields on an object that held 10, so exclude `_del` names, then settle the number with
+`sf sobject describe`.
+
+---
+
+## Widening a Text Area to a Long Text Area deploys green and breaks filters
+
+A Text Area (fixed at 255 characters, with no `<length>`) is filterable, sortable, and groupable. A
+Long Text Area is none of the three, in SOQL, reports, and list views alike. The conversion deploys
+green and keeps every value (verified byte for byte on 24 records), and then a query, report filter,
+or list view filter on the field fails:
+
+```
+INVALID_FIELD: field '<field>' can not be filtered in a query call
+```
+
+Salesforce does refuse the conversion while a formula or validation rule depends on the field, so
+those are safe. Report and list view filters are the exposure, and `MetadataComponentDependency`
+will not answer a `RefMetadataComponentName` query, so there is no quick way to list them. Check by
+hand before converting, and afterward read the describe, where `filterable` turns `false`, instead
+of assuming a green deploy changed nothing.
+
+Widening is otherwise safe, and it is the only fix when source data runs past 255 characters,
+because Salesforce rejects the whole record with `STRING_TOO_LONG` instead of truncating the field.
+A `Url` field cannot be widened at all, and Lightning inline edit truncates an over-long paste
+instead of erroring; both are in `salesforce-flow-and-ui-defects`.
+
+---
+
+## An External Client App's first deploy to an org takes two passes
+
+**An `OauthTokenExchangeHandler` does not resolve an `ExternalClientApplication` in its own deploy
+payload**, so the app has to exist in the target org first. Measured: a delta of seven components in
+which six validated and the handler alone failed with:
+
+```
+In field: ExternalClientApplication - no ExternalClientApplication named <App_Name> found
+```
+
+So deploy the External Client App and its Apex first, and the handler once they are in the org. A
+pipeline that validates each pull request's delta against an org cannot land both in one pull
+request: merge the app first, let it reach the org, and the handler then validates on its own. It is
+a one-time bootstrap per org, not a defect in either file.
+
+**Two fields are org-scoped and do not belong in source:**
+
+- **`ExtlClntAppOauthSettings.oauthLink`** points at a record instance (`<orgId>:<recordId>`), so it
+  resolves in no other org, and the failure misleads:
+
+  ```
+  We couldn't update your OAuth link, because either your external client app or the external client app that you are trying to associate with doesn't have the distribution state PACKAGED
+  ```
+
+  It reads as a distribution-state problem and is not one. Drop the element from source.
+- **`OauthTokenExchangeHandler.apexExecutionUser`** holds a username, which a sandbox refresh
+  suffixes, so no single value resolves in more than one org and there is nothing to fix in the
+  file. The handler was kept in source as documentation and listed in `.forceignore`, so no deploy
+  carries it.
+
+`orgScopedExternalApp` is tolerated: apps carrying one sandbox's org Id still validated against a
+different org.
+
+---
+
 ## Covered by other skills
 
 - **Deleting a field or a flow that flow versions reference**, and why a dependency query returning
@@ -238,3 +408,5 @@ sequence is in `salesforce-flow-versions`.
   deployed field as missing: `salesforce-flow-and-ui-defects`.
 - **Picklist values**, including what a picklist deploy does to the values the file leaves out:
   `salesforce-picklist-changes`.
+- **A field's `unique` setting**, which deploys green and decides whether a load can write one value
+  to many records: `salesforce-data-loading`.
