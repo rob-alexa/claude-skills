@@ -1,15 +1,15 @@
 ---
 name: salesforce-code-analyzer-gate
-description: "The Salesforce Code Analyzer check on a pull request, and what to do when it is red. TRIGGER when: an analyze job fails or is red on a PR, a finding looks pre-existing or unrelated to the change, ApexCRUDViolation appears, analyzer suppressions are being edited, a workflow change does not seem to reach an open PR, or a Critical UnexpectedEngineError appears running it locally on Windows."
+description: "The Salesforce Code Analyzer check on a pull request, and what to do when it is red. TRIGGER when: an analyze job fails or is red on a PR, a finding looks pre-existing or unrelated to the change, ApexCRUDViolation or WITH SYSTEM_MODE comes up, a finding needs suppressing or analyzer suppressions are being edited, a script that never runs in Salesforce fails an LWC rule, a workflow change does not seem to reach an open PR, or a Critical UnexpectedEngineError appears running it locally on Windows."
 metadata:
-  version: "1.0"
+  version: "1.1"
   license: MIT
 ---
 
 # salesforce-code-analyzer-gate
 
-Running Salesforce Code Analyzer as a PR check: what actually fails the job, why a finding you did not
-write shows up on your branch, and the four mechanics that make a red or green result mean something
+Running Salesforce Code Analyzer as a PR check: what actually fails the job, why a finding you did
+not write shows up on your branch, and the mechanics that make a red or green result mean something
 other than it looks like.
 
 Assumes a workflow that runs the `Recommended` rule set (PMD, ESLint, and Flow, with no org and no
@@ -71,9 +71,10 @@ targets. A PR with nothing scannable then runs a checkout, a `git diff`, and a `
 seconds, green**, against 1m44s for a real scan.
 
 It also buys no extra coverage in practice. In the measured repo, outside the Salesforce source
-directory the scannable extensions matched seven tracked files (three jest mocks, a jest config, two
-CSS files, and one HTML mockup), and the `.apex` anonymous scripts directory did not match the pattern
-at all.
+directory and the `.claude/` tooling directory the scannable extensions matched seven tracked files
+(three jest mocks, a jest config, two CSS files, and one HTML mockup), and the `.apex` anonymous
+scripts directory did not match the pattern at all. Tooling scripts are the one place that needs
+scoping out, covered in *Scripts that never run in Salesforce fail LWC rules*.
 
 ---
 
@@ -110,12 +111,100 @@ it forces the author to state whether the query should respect the running user.
   automation is the usual honest case.
 - Reserve an inline suppression for a real false positive rather than reaching for it first.
 
+**Bare DML takes the same declaration as an argument.**
+`Database.update(records, AccessLevel.SYSTEM_MODE)` clears the finding on a DML statement and
+changes nothing at runtime. Measured with Code Analyzer 5.14 (`Recommended`,
+`--severity-threshold 2`) on one class, whose SOQL and DML went from eight High `ApexCRUDViolation`
+findings to zero. In that measurement `Database.insert(records, false)` was not flagged at all.
+
+---
+
+## Suppressing a finding
+
+Apex takes an inline `@SuppressWarnings('PMD.<Rule>')`. Flows take no inline markers, so a flow's
+suppression is an entry under `suppressions:` in the root `code-analyzer.yml`, keyed by file path
+and carrying a `rule_selector` and a `max_suppressed_violations`:
+
+```yaml
+suppressions:
+  disable_suppressions: false
+
+  # Why this flow has to run on every record, in a sentence a reviewer can check.
+  "force-app/main/default/flows/My_Flow.flow-meta.xml":
+    - rule_selector: "flow:TriggerEntryCriteria"
+      max_suppressed_violations: 1
+```
+
+Two traps:
+
+- **On an `@InvocableMethod`, put the suppression on the class.** `@Deprecated` is the only
+  annotation allowed beside `@InvocableMethod`, so a method-level `@SuppressWarnings` fails to
+  compile with *"The only annotation that can be used with InvocableMethod is Deprecated."* On the
+  class declaration it covers every method. A local `sf project deploy start --dry-run` catches the
+  compile error before CI does, which matters because the analyzer does not (see *A green result is
+  not evidence the code compiles*).
+- **The last entry in `code-analyzer.yml` is where branches collide.** New blocks get appended at
+  the end of `suppressions:`, so a branch that edits what was the final entry when it was cut
+  conflicts with any block appended on the base since: git sees two changes in adjacent positions.
+  The first move's `git diff` shows whether the base has appended past the entry you are about to
+  edit. A conflicting PR then stops reporting checks instead of turning red (see *A green result on
+  an older run is not evidence the code is clean*). If your checkout converts line endings
+  (`core.autocrlf` on Windows), a scripted rewrite of the file has to match `\r\n`.
+
 ---
 
 ## It scans whole changed files
 
 A pre-existing finding in a file the PR merely touches can turn somebody's unrelated PR red. **Judge a
 finding on what the PR actually changed.** Expect this on any edit to an older class.
+
+Weigh the whole-file scan as a design before filtering the scan to changed lines. It is the
+boy-scout rule as a mechanism: each PR leaves the files it touches cleaner, which raises quality
+without a one-time cleanup project. When the threshold is the problem, the useful questions are
+which High-severity rules are worth blocking on and whether to clear the existing findings first,
+not how to scan less.
+
+---
+
+## Scripts that never run in Salesforce fail LWC rules
+
+A delta collected by file extension picks up every changed `.js` in the repo, and the ESLint engine
+applies its LWC rules to every `.js` it is given. A helper script that runs in a local shell or a
+headless browser, such as one shipped with a Claude Code skill under `.claude/skills/`, can then
+only fail rules written for code that runs in Salesforce. In the recorded case a page-audit script
+went red on one High `@lwc/lwc/no-inner-html` for reading `outerHTML` into a finding's snippet, plus
+five `@lwc/lwc/no-document-query` findings on the `document.querySelectorAll` calls that are its
+whole job. Rewriting a script to satisfy rules it is not subject to is the wrong fix: querying the
+whole document is what a page audit is for.
+
+Scope it out in the step that collects the delta, after the extension filter:
+
+```bash
+# typed.txt: the changed files, already filtered to scannable extensions
+grep -v '^\.claude/' typed.txt > scannable.txt || true
+grep '^\.claude/' typed.txt > skipped.txt || true
+```
+
+Two details keep the skip honest:
+
+- **Print what was skipped**, in the job log and in the run summary when nothing else was scannable,
+  so a skip never reads as a clean scan.
+- **Filter inside the job, not in the trigger.** A `paths-ignore:` entry has the same defect as a
+  `paths:` filter: a PR that changes only those files posts no status at all, so the check could no
+  longer be required. Filtering in the collect step keeps the workflow triggering on every PR.
+
+---
+
+## Reproducing CI's findings locally
+
+Run the shape CI runs. If the workflow passes one `--target` holding a comma-separated list and no
+`--workspace`, do the same: in one measurement, passing `--workspace` with several `--target` flags
+double-counted findings against what CI reported. To iterate on one file before pushing, with the
+threshold set to whatever your workflow enforces:
+
+```bash
+sf code-analyzer run --rule-selector Recommended --target <file> --severity-threshold 2
+```
 
 ---
 
@@ -131,6 +220,28 @@ gh run list --branch <head> --limit 1 --json createdAt
 
 The risk here runs toward believing a stale pass rather than chasing a false failure, which is why it
 is worth the two commands.
+
+---
+
+## A green result is not evidence the code compiles
+
+Code Analyzer's PMD engine and Salesforce Graph Engine both parse Apex without type checking, so
+neither caught a real compile error (a method referenced as though it were a field) when measured in
+2026. Pair the analyzer with a server-side compile: `sf project deploy start --dry-run` against an
+org on every PR with a metadata delta. One working setup adds `--test-level RunLocalTests` when the
+delta holds an Apex class, trigger, or validation rule.
+
+No offline type checker is known to close the gap:
+
+- **The `apexlink` sf plugin is stale.** It is at 2.3.5, last published 2022-06-06 (checked in
+  November 2026 with `npm view apexlink version time.modified`), so it rejects newer standard types
+  such as `System.Assert`. It also resolves types from local source, so a managed package's types
+  read as unresolved.
+- **Two newer checkers have not been measured against that compile error**:
+  `@apexdevtools/apex-ls-mcp`, an MCP wrapper around the current `apex-ls`, and the
+  `salesforce-development` Claude Code plugin's `apex_diagnostics` tool. Whether anything short of
+  an org catches it is open, and anything resolving types from local source would still miss
+  managed-package types (an inference, not a measurement).
 
 ---
 
@@ -182,13 +293,23 @@ The underlying bug is upstream, so re-check after a plugin update.
 
 ---
 
-## If GitHub Advanced Security is off, the SARIF upload does nothing
+## GitHub Advanced Security: the SARIF upload with and without it
 
-Keep the SARIF-to-code-scanning step `continue-on-error`, because without the license it silently does
-nothing. The inline annotations, the summary, and the artifact are the real output and need no license.
+**Without it, the SARIF-to-code-scanning step silently does nothing**, so keep that step
+`continue-on-error`. The inline annotations, the summary, and the artifact are the real output and
+need no license. Lighting up code scanning needs the **GitHub Code Security** add-on. It is
+available on the Team plan, so no Enterprise upgrade is required.
 
-Lighting up code scanning needs the **GitHub Code Security** add-on. It is available on the Team plan,
-so no Enterprise upgrade is required.
+**With it, the same step lands findings in the repo's Security tab** as code scanning alerts under
+the `category` the upload step sets (for example `code-analyzer`), and a **Code scanning results**
+check appears on PRs beside the analyzer check. Neither is required unless you make it so. Keep the
+step `continue-on-error` anyway: Code Security is billed per active committer, so it can be turned
+off again, and a lapsed license must never turn the analyzer check red.
+
+**Not every code scanning alert is a Code Analyzer finding.** In the measured repo, when Code
+Security was applied through an organization-level security configuration, CodeQL default setup
+switched on at the same time (for Actions, JavaScript/TypeScript, and Python) and posted its own
+alerts. Read the tool name on an alert before treating it as the analyzer's.
 
 ```bash
 gh api repos/<owner>/<repo> --jq '.security_and_analysis'

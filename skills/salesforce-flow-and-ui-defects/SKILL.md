@@ -1,8 +1,8 @@
 ---
 name: salesforce-flow-and-ui-defects
-description: "Salesforce Flow and Lightning defects that deploy clean and fail only on screen. TRIGGER when: a Lightning page, tab, or component renders blank or empty, a component is missing on a phone, a newly deployed field reads as missing, a Flow decision never matches, a Flow merge field renders blank, an orchestration errors 'Invalid Resource reference', inline edit silently truncates a value, a required field keeps its error after being filled, a record cannot be created because a validation rule refused a flow's own update, or a screen flow needs testing without firing a destructive Submit. Not for a deploy that fails or reports a component error."
+description: "Salesforce Flow and Lightning defects that deploy clean and fail only on screen. TRIGGER when: a Lightning page, tab, or component renders blank or empty, a component is missing on a phone, a newly deployed field reads as missing, a Flow decision never matches, a Flow merge field renders blank, a fault path or error screen is added to a screen flow, an orchestration errors 'Invalid Resource reference', inline edit silently truncates a value, a required field keeps its error after being filled, a record cannot be created because a validation rule refused a flow's own update, or a screen flow needs testing without firing a destructive Submit. Not for a deploy that fails or reports a component error."
 metadata:
-  version: "1.0"
+  version: "1.1"
   license: MIT
 ---
 
@@ -209,6 +209,35 @@ Two things this does not fix, both worth checking in the same pass:
 
 ---
 
+## A Dynamic Related List renders blank on a phone unless the org enables it for mobile
+
+**Dynamic Related List - Single** (`lst:dynamicRelatedList`) renders in the Salesforce mobile app
+only when the org has **Dynamic Related Lists for Mobile (Beta)** turned on: in Setup under Quick
+Find "Salesforce Mobile App", or `MobileSettings.enableDRLOnMobile` in the Metadata API. With it
+off, the tab holding the component renders empty on the phone while desktop shows every row, and
+nothing errors. Salesforce's
+[Summer '25 release note](https://help.salesforce.com/s/articleView?language=en_US&id=release-notes.rn_dynamic_related_lists_for_mobile.htm&release=256&type=5)
+says that before this setting the component "rendered only on record pages on desktop."
+
+**The setting is per org, and only a deploy that carries `Mobile.settings` changes it.** So a page
+that works on a phone in production can be blank in a sandbox copied before production turned it on.
+In the recorded case it was off in a shared QA sandbox and on in production and another sandbox,
+which blanked two tabs on the phone and blocked a QA step. Turning it on fixed both, confirmed on an
+iPhone.
+
+- **The tell is the component type, not the record.** The setting is org-wide, so every
+  `lst:dynamicRelatedList` on every record page is blank on the phone, not one record. Read the
+  blank tab's `componentName` before chasing access, page assignment, or the data.
+- **One retrieve settles it:** retrieve `Settings` member `Mobile` and read `enableDRLOnMobile`. The
+  Metadata API reference does not list the field, but it retrieves and deploys at API 66.0. The
+  `SetupAuditTrail` action for a change is `dRLOnMobileEnabledOffOn`.
+- **To turn it on**, use the Setup toggle, or deploy the org's own freshly retrieved
+  `Mobile.settings` with only that value changed, then confirm by retrieving it back. Allow about 10
+  minutes and a force-close of the app before rechecking the phone, since the app has been observed
+  showing the old page for that long after a change.
+
+---
+
 ## "Related List - Single" is page-layout-dependent, and a missing list renders the tab blank
 
 The standard **Related List - Single** component (`force:relatedListSingleContainer`) shows one related
@@ -228,7 +257,9 @@ only changes how rows render.
 - **Two fixes, one durable.** Fragile: add the related list to the assigned page layout, which re-breaks
   on any layout reassignment. Durable and preferred: in App Builder, **Upgrade** the component from
   Related List - Single to **Dynamic Related List - Single** (`lst:dynamicRelatedList`), which is
-  configured on the FlexiPage itself and is not layout-dependent.
+  configured on the FlexiPage itself and is not layout-dependent. On a phone the upgraded component
+  depends on an org setting instead (**A Dynamic Related List renders blank on a phone unless the
+  org enables it for mobile**), so check that setting in every org the page ships to.
 - **What feeds which.** The FlexiPage defines tabs, regions, and components. Page layouts still feed the
   **Record Detail** fields unless Dynamic Forms is on, the **Related Lists** (all) component, and a
   **Related List - Single**'s list and columns. When a component misbehaves, first decide whether it is
@@ -269,14 +300,23 @@ them to approve, while the stored approver Id and their own user Id were the sam
 ## A cross-object hop off an automatically-stored Get Records renders blank
 
 `{!GET_Running_User.Manager.Name}` renders as empty text with no error. Automatic output storage gives
-you the queried record's **own** fields; traversing a lookup off it does not populate. The tell is a
-sentence with a hole in it, for example "This request goes to your manager, , for approval."
+you the queried record's **own** fields; traversing a lookup off it to the related record's fields
+does not populate. The tell is a sentence with a hole in it, for example "This request goes to your
+manager, , for approval."
 
 Query the related record as its own Get Records, filtered on `GET_Running_User.ManagerId`, and reference
 `{!GET_Manager.Name}`. A field that lives directly on the queried record, like `ManagerId` itself, works
 fine, which is why a surrounding visibility rule can keep working while only the name is blank.
 
-### The same blank appears spanning `$Record` to an audit user
+**The one exception is the target's own Id.** `{!GET_X.Lookup__r.Id}` resolves, and equals
+`{!GET_X.Lookup__c}`, because that Id is stored on the queried record rather than fetched from the
+related one. Verified in a sandbox in 2026: a fallback that set an approver from
+`GET_Assignment.User__r.Id`, off an automatically stored Get Records, had populated the approver on
+four records where that fallback was the only path available. This matters most in review. Read as
+covering `__r.Id`, the blank-hop rule produced a confident and wrong defect report against two
+working fallbacks.
+
+### The same blank appears off `$Record`: audit users and two-hop spans
 
 In a record-triggered flow, spanning from `$Record` to an audit-user relationship for its name renders
 **blank** in emails and text templates, even though the underlying Id field is set. The related User is
@@ -287,6 +327,13 @@ not hydrated on the triggering record. It hits `{!$Record.LastModifiedBy.Name}`,
 For "who performed the action" in a record-triggered flow, use the running-user global
 `{!$User.FirstName} {!$User.LastName}` instead. The running user is whoever did the DML that fired the
 flow. This surfaced on a job-completed notification whose "Completed by" line was empty in every email.
+
+**Two hops out, a custom-lookup span fails too.** A Decision on
+`$Record.Parent__r.Signer__r.Name` in a record-triggered flow rendered blank and never matched. An
+explicit Get Records on the Contact, filtered `Id = {!varParent.Signer__c}`, with the Decision on
+`GET_Signer.Name`, matched on the next run. That is one observation, and a single hop off `$Record`
+was not tested in the same flow, so query the far record yourself for any span past the first
+lookup.
 
 ---
 
@@ -312,6 +359,26 @@ That covers `null`, the default, and whichever states you deliberately want to l
 
 ---
 
+## Narrowing a delete-then-recreate to one status duplicates the rows it skips
+
+An approval flow that rebuilds its reviewer rows on resubmit, deleting every reviewer row on the
+parent and then creating the set again, throws away any decision already recorded on those rows.
+The obvious repair is to narrow the Get Records that feeds the delete to `Status = Not Started`.
+**That creates duplicates instead.** Rows whose status is blank or `In Progress` are no longer
+deleted, and the Create that follows adds those reviewers again, so a resubmit stops losing
+decisions and starts producing duplicate rows: the same failure with the sign flipped. Blank is not
+hypothetical; in the recorded case a shared sandbox already held blank-status reviewer rows when
+this was found.
+
+If the delete has to be narrowed, **exclude the decided values instead** (`!= Approved`,
+`!= Rejected`, and any other decided value). A SOQL `!=` includes rows where the field is null, so
+blank and `In Progress` rows stay in scope for the delete. Each status value added to the picklist
+later needs the same decision about which side of that line it belongs on. In the recorded case the
+fix that shipped was neither: a guard in front of the delete, keyed off a reviewer having already
+responded, with the delete itself left unfiltered.
+
+---
+
 ## Make a decision's default path the safe one
 
 A Flow decision sends anything unmatched down the default connector. Pointing that at a real outcome
@@ -323,6 +390,61 @@ set a radio's DOM state without firing the component's change event.
 
 Give every genuine outcome its own explicit rule, and leave the default connector for a screen that
 records nothing and says so.
+
+---
+
+## A fault path routed to a screen commits what was already saved
+
+Adding a fault connector is a real improvement over `An unhandled fault has occurred in this flow`,
+and it quietly changes what the transaction does. An unhandled fault fails the interview and
+Salesforce rolls the transaction back. A handled one does not fail the interview: the flow follows
+the fault path and carries on, and if that path ends at a screen, the transaction **ends** there.
+Salesforce documents this in
+[How Flows Run in Transactions](https://help.salesforce.com/s/articleView?id=platform.flow_concepts_transaction.htm&type=5):
+"The transaction ends when: A Screen, Local Action, or Wait element is run."
+
+So where each fault path sits in the element order decides whether the error screen tells the truth.
+A fault on or before the DML element means nothing was saved. A fault after it means the record was
+saved and the rest of the flow did not run, which an error screen reading "this action could not be
+completed" describes wrongly, in the direction that makes the user do it a second time.
+
+In the recorded case a submit flow ran `Screen_Submit`, `UPD_Record`, `Stamp_Close_Date_Subflow`,
+`GET_Approver`, `ASSIGN_Recipients`, `Send_Email`, `Send_Notification_Subflow`, `Screen_Done`. Two
+of the six fault paths added to it, on `GET_Approver` and `Send_Email`, sat past the update, so a
+bad approver address would have left the record submitted and its close date stamped with nobody
+notified, under a screen saying the action did not complete.
+
+**Map the connector graph before writing the error text**, rather than reading the fault list off
+the diff, which shows which elements gained a path and not where they sit:
+
+```python
+import xml.etree.ElementTree as ET
+PATH = 'force-app/main/default/flows/My_Flow.flow-meta.xml'
+ns = '{http://soap.sforce.com/2006/04/metadata}'
+r = ET.parse(PATH).getroot()
+def tgt(e, tag):
+    c = e.find(ns + tag)
+    return None if c is None else c.find(ns + 'targetReference').text
+print('START ->', tgt(r.find(ns + 'start'), 'connector'))
+for kind in ['recordLookups', 'recordUpdates', 'recordCreates', 'recordDeletes',
+             'actionCalls', 'subflows', 'screens', 'assignments', 'decisions']:
+    for e in r.findall(ns + kind):
+        print(f"{kind:15} {e.find(ns + 'name').text:35} -> {tgt(e, 'connector')}"
+              f"   FAULT-> {tgt(e, 'faultConnector')}")
+```
+
+Then either move every element that can fault ahead of the DML, or give the post-DML faults their
+own screen saying the record saved and naming what did not happen. One generic error screen cannot
+be accurate for both halves of a flow with a DML element in the middle.
+
+A `FlowSubflow` **cannot** take a `faultConnector` at API 66.0, and a check-only deploy rejects it
+at the type level, so a fault raised inside a subflow still reaches the user as the generic message.
+Covering that needs fault handling inside the subflow plus an output the caller can read.
+
+**Calibration:** the half about the transaction ending at a screen is documented. That the pending
+DML therefore commits rather than rolling back is inference from it, not a sentence found in the
+docs. It is cheap to settle in a sandbox by faulting a flow deliberately past its update and
+re-reading the record.
 
 ---
 
@@ -456,7 +578,7 @@ written. That buys unlimited Submit clicks on a screen whose real Submit deletes
 
 Check first that no DML runs before the first screen, rather than assuming it. In the recorded case 147
 elements were reachable from `start` before the first screen and every one of them was a read. Confirm
-the fixture afterwards by reading the records back, rather than trusting that nothing happened.
+the test records afterwards by reading them back, rather than trusting that nothing happened.
 
 ### Three measurement traps, each of which produced a wrong answer first
 

@@ -1,8 +1,8 @@
 ---
 name: salesforce-business-days
-description: "Business Hours, holidays, and business-day math in Salesforce. TRIGGER when: a requirement says 'after N business days', deploying or editing BusinessHours settings or the holiday list (a deploy REPLACES holidays), adding a company holiday, or working out whether an org's Business Hours are real business hours at all."
+description: "Business Hours, holidays, and business-day math in Salesforce. TRIGGER when: a requirement says 'after N business days', deploying or editing BusinessHours settings or the holiday list (a deploy REPLACES holidays), adding a company holiday, a formula that has to skip holidays, or working out whether an org's Business Hours are real business hours at all."
 metadata:
-  version: "1.0"
+  version: "1.1"
   license: MIT
 ---
 
@@ -175,6 +175,25 @@ formula cannot see them.
 **The multiplier is the length of your business day.** A continuous nine-hour day with no lunch break
 makes "5 business days" `5 * 9 * 3600 * 1000`. Not `5 * 8h`, which lands a day early, and not `5 * 24h`.
 Since it changes with the configured hours, name the constant rather than inlining the literal.
+
+**A formula that has to skip holidays needs a holiday index**, because a formula cannot read
+`Holiday` or Business Hours, and a roll-up tool such as DLRS cannot bridge that gap either. The
+design that worked in one implementation:
+
+- An Apex method counts the weekday holidays on the holiday-aware set on or before a given date.
+- Apex stores that count in a Number field beside each date the formula uses.
+- A scheduled job writes today's count to a hierarchy custom setting shortly after midnight in the
+  org's time zone.
+- The formula subtracts `index(end) - index(start)` from its weekday arithmetic, reading the custom
+  setting (`$Setup.My_Setting__c.Holidays_Through_Today__c`) in place of the end index while the
+  record is still open. Wrap the subtraction in `BLANKVALUE(..., 0)` with blank-field handling set
+  to `BlankAsBlank`, so a blank index skips no holidays rather than blanking the whole count.
+
+**A change to the holiday list moves the index of every later date**, so the daily job should
+fingerprint the list and run a full recompute when it changes. **The schedule is set up per org by
+hand**, as a user on the org's time zone, since a scheduled job cannot ship from source. Until it
+runs, an open count skips weekends only, and so does a finished one on a record nobody has saved
+since the deploy.
 
 ---
 

@@ -2,7 +2,7 @@
 name: stakeholder-questionnaire
 description: "Getting answers out of a colleague who holds knowledge you do not. TRIGGER when: a decision needs input from Legal, a project manager, or a business owner, a story stalls on something only a stakeholder can answer, several open questions are piling up for one person, or a meeting needs an agenda of questions. Interview about the send, not the subject."
 metadata:
-  version: "1.0"
+  version: "1.1"
   license: MIT
   adapted_from: "https://github.com/mattpocock/skills (to-questionnaire) - MIT, Copyright (c) 2026 Matt Pocock"
 ---
@@ -66,6 +66,54 @@ Close with a catch-all asking what you should have asked.
 
 Produce it in a format the recipient will actually open, with a lowercase kebab-case filename, since
 the filename becomes the document's visible title once it is shared.
+
+## When the recipient has to type into it
+
+**A formatted HTML document has nowhere to type, and a plain PDF is read-only, so a questionnaire
+built for reading cannot be filled in.** That is a gap in this skill's own premise, not an edge case:
+in the case behind this section, the first response to a finished HTML questionnaire was a request
+for a writeable version. Keep a read-only document as the default, since that is what gets read; this
+is the narrow case where a fillable one earns its place.
+
+**Do not attach the HTML.** It is the right format for reading and for pasting into a rich-text
+field, and the wrong one to attach anywhere: nothing renders a downloaded `.html` in place, so the
+recipient is opening a file instead of looking at a document. That holds whether or not the
+questionnaire needs to be fillable.
+
+**Then decide between a fillable PDF and a Word document, and say which you picked and why.** A
+**fillable PDF** keeps the styling exactly and opens the same way for everyone, at the cost of the
+recipient's viewer having to save form data (Chrome, Edge, and Acrobat Reader all do). A **Word
+document** is lower friction in an Office shop and easier to edit freely, at the cost of the styling,
+since Word ignores CSS. Neither is obviously right, so offer the choice instead of assuming; the
+first time this came up, the answer was the PDF.
+
+**For the PDF route, give each answer stub a bordered box and keep it with its label.** The
+`break-inside: avoid` is load-bearing: with the label and the box as separate blocks, a page break
+strands the box alone on the next page with nothing saying what it is for. If you build from Markdown
+with pandoc, keep the snippet on one unbroken line: pandoc ends a raw HTML block at any blank line and
+wraps what follows in `<p>` tags.
+
+```html
+<div style="page-break-inside:avoid;break-inside:avoid;margin:10px 0 6px 0;"><p style="margin:0 0 6px 0;"><strong>Answer:</strong></p><div class="answerbox" style="min-height:92px;border:1px solid #c8c8c8;border-radius:3px;"></div></div>
+```
+
+Then add one multiline text field over each box. Two traps, both silent:
+
+- **pypdf's `merge_page` drops the form.** It carries content streams but not widget annotations or
+  the catalog's `/AcroForm`, so merging a field overlay into the content writes a valid PDF that
+  opens fine and holds **zero** fields, with no error. Clone the overlay as the base and merge the
+  content in underneath it; widgets render on top of page content either way. Then re-read the written
+  file and count its fields, since nothing else will tell you.
+- **A CSS box with rounded corners renders as a curve, not a rectangle.** Looking for the boxes in
+  pdfplumber's `page.rects` found three where there were eight, with wrong coordinates; they are in
+  `page.curves`.
+
+Cross-check the boxes you find against the count of "Answer" labels, and refuse instead of guessing
+when the two disagree, since a field placed over the wording is worse than no field.
+
+**Attach only the format you are asking them to use.** Attaching two copies reads as a question about
+which one to open. And tell them to download it before typing: whether Jira renders a PDF in place is
+not established (its attachment API exposes no thumbnail for one), and downloading works either way.
 
 ## Write it for the person, not for the repo
 

@@ -1,8 +1,8 @@
 ---
 name: salesforce-files-queries
-description: "Querying Salesforce Files. TRIGGER when: any ContentVersion or ContentDocumentLink query, counting files or building a file population, files that look missing or under-counted, or ERROR_HTTP_414 on a long IN list. An unfiltered ContentVersion sweep under-returns and its COUNT corroborates the wrong number."
+description: "Querying Salesforce Files. TRIGGER when: any ContentVersion or ContentDocumentLink query, counting files or building a file population, files that look missing or under-counted, deleting or re-creating a ContentDocumentLink, or ERROR_HTTP_414 on a long IN list. An unfiltered ContentVersion sweep under-returns and its COUNT corroborates the wrong number."
 metadata:
-  version: "1.0"
+  version: "1.1"
   license: MIT
 ---
 
@@ -46,6 +46,18 @@ them; the sweep does not.
   parameter, so roughly 1,000 ids in an `IN` list returns `ERROR_HTTP_414: URI Too Long` while 400 is
   comfortable. `sf data query` has no `--bulk` flag in the current CLI; it paginates a plain query
   itself, which is exactly what makes the unfiltered shortcut look attractive in the first place.
+
+## Before deleting or re-creating a file's `ContentDocumentLink`
+
+Deleting a link and re-creating it in one transaction is a common way to make link-triggered
+automation, your own or a managed package's, process files that predate it. **Never do it to a file
+that was attached in a Chatter post or comment.** Deleting the record link nulls
+`FeedAttachment.RecordId` and `FeedItem.RelatedRecordId`, and the attachment cannot be pointed back
+(`Cannot update Feed Attachment with type Content`), so the post loses the file for good.
+
+A guard has to check both Id types before it deletes a link: an inline image in a rich-text post
+references the `ContentDocument` Id, while a file attached to a post references the `ContentVersion`
+Id. Verified in a sandbox in 2026.
 
 ## Reading the symptom
 

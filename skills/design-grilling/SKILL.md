@@ -1,8 +1,8 @@
 ---
 name: design-grilling
-description: "Settling a design before building it. TRIGGER when: picking up a story or bug whose approach is open, a requirement or design doc leaves choices unstated, a new object, field, relationship, or flow is proposed, or a plan rests on something nobody has confirmed. Ask the whole frontier in one round, recommend an answer to each, and build once the frontier is empty."
+description: "Settling a design before building it. TRIGGER when: picking up a story or bug whose approach is open, a requirement or design doc leaves choices unstated, a new object, record type, field, relationship, or flow is proposed, or a plan rests on something nobody has confirmed. Ask the whole frontier in one round, recommend an answer to each, and build once the frontier is empty."
 metadata:
-  version: "1.0"
+  version: "1.1"
   license: MIT
   adapted_from: "https://github.com/mattpocock/skills (grilling, wayfinder) - MIT, Copyright (c) 2026 Matt Pocock"
 ---
@@ -20,9 +20,9 @@ platform-agnostic. Substitute your own standing frontier.
 
 ## When a round earns its cost
 
-Grill when a wrong answer costs a rebuild: a new object, field, relationship, or flow; an open
-approach; a design document; anything reaching into a managed package's territory. For mechanical work
-with one obvious shape (a label fix, a description backfill, a picklist value the ticket names
+Grill when a wrong answer costs a rebuild: a new object, record type, field, relationship, or flow; an
+open approach; a design document; anything reaching into a managed package's territory. For mechanical
+work with one obvious shape (a label fix, a description backfill, a picklist value the ticket names
 outright), say in one line that you are skipping the interview and get on with it.
 
 **An empty frontier is a valid first result.** When the ticket, the org, and the requirement already
@@ -93,6 +93,10 @@ ask about something only they know.
   was promoted to a *requirement* one session later, and a confident "conflicting requirements"
   finding was framed on top of it, when the story text had always said something plainer and the
   stakeholder settled it in one line.
+- **A decision in an accepted design is the exception, and it binds.** A design your team has formally
+  adopted is the design of record: cite its decisions, build to them, and change one deliberately
+  instead of re-deriving it. Its factual claims still get re-verified against the live org, because
+  adopting a design makes a decision binding without making a claim in it true.
 
 **A running lookup is an unsettled prerequisite, not a stop.** Only the questions downstream of it
 wait for it. Put the rest of the frontier now.
@@ -107,19 +111,28 @@ should hold.
   field do I need?". The recorded case cost five stories, five independent QA sign-offs, and a merged
   PR building a custom lookup plus a two-way sync, most of it reversed once it emerged the package
   already modeled the relationship and already displayed the records. One column added to an existing
-  managed field set replaced a field, three flows, and the sync.
+  managed field set replaced a field, three flows, and the sync. For a proposed object or record type,
+  search the platform's standard objects and the package's own first.
 - **Is the cardinality really 1:1?** Where every record has exactly one parent and every parent has
   exactly one of them, the fields belong on the parent. A separate object has to clear a stated
   exception, and "it is a distinct concept" is not one, because a schema models cardinality rather
-  than vocabulary. The tell is the compensating machinery: when most of a design's automation exists
-  to work around the split, the split is the defect.
+  than vocabulary. The exceptions that do count: it is not actually 1:1 (ask the business, since
+  today's data cannot settle it); a genuine record-level security boundary; its own lifecycle,
+  ownership, or approval; sparse fields where the driver is clutter; or the parent nearing a field
+  limit. The tell is the compensating machinery: when most of a design's automation exists to work
+  around the split, the split is the defect. Ask the same of several proposed objects kept to one
+  field contract, which are one object with a type.
+- **If you prototype it, settle its objects first.** A prototype in your own sandbox shows a design on
+  the real platform, which a mockup cannot, but a working prototype tends to ship as built. So the
+  objects it will create clear this frontier before they exist, not at review.
 - **Which org, and is it production?** Take it from the resolved target plus `Organization.IsSandbox`,
   never from the alias.
 - **Who else is editing these components?** Check before any deploy to a shared org, and check every
   path the deploy carries rather than the interesting ones.
-- **Who verifies this, and can they log in to that org?** An independent tester, never the builder.
-  Check `LastLoginDate` and `Email` in the same breath as the profile, because having a user in an org
-  is not the same as being able to sign in to it.
+- **Who verifies this, and can they log in to that org?** An independent tester, never the builder,
+  confirmed able to sign in there with the access the test needs before you name that org as the
+  target. Check `LastLoginDate` and `Email` in the same breath as the profile, because having a user
+  in an org is not the same as being able to sign in to it.
 - **What do the org's own labels and values say?** Page-facing labels for anything a tester will
   follow, and the live picklist values for anything a rule, formula, or flow names.
 - **What did the requirement literally ask for?** Quote the ticket line. Where it is genuinely silent,
@@ -128,7 +141,8 @@ should hold.
 ## Where the settled decisions land
 
 Write the agreed approach into wherever your team keeps the live implementation plan, and keep the
-discussion that reached it in the comments. If posting it is an outward action under someone's name,
+discussion that reached it in the comments, so the plan always reads as the current approach instead
+of something reconstructed from a thread. If posting it is an outward action under someone's name,
 show the draft and get a go-ahead before it goes up.
 
 Then build.
