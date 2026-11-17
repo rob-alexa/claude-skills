@@ -9,7 +9,7 @@ https://github.com/mattpocock/skills, under the MIT License.
 | `session-handoff` | `handoff` | Storage moved from the OS temporary directory to a task folder that survives, since the value shows up days later. Added the context-cost argument, the four fixed sections, the source tag on every figure, the check for an existing task folder before starting, and the naming rule. |
 | `stakeholder-questionnaire` | `to-questionnaire` | Output moved from a bare Markdown file to a formatted document a non-technical reader will open, and the "ask nothing only answerable in a tool the recipient does not use" constraint, plus a fillable PDF or Word route for a questionnaire the recipient has to type into. |
 
-The other nine skills in this collection are original work and are covered by [LICENSE](LICENSE).
+The other 13 skills in this collection are original work and are covered by [LICENSE](LICENSE).
 
 ## Upstream license, reproduced in full
 

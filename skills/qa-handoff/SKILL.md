@@ -232,7 +232,10 @@ catch an LWC that is simply absent from the mobile app before a user reports it.
 is redirected to Salesforce Classic from the frontdoor URL, from a Lightning record URL, and from
 `/one/one.app` alike, while the identical sequence in a desktop session reaches Lightning. **Why was
 not established**, so read it as observed behavior rather than a settled rule and re-test if it
-matters.
+matters. Resizing a desktop browser does not help either: it still renders the desktop page, because
+Salesforce picks the form factor from the user agent rather than the viewport. For the real phone
+layout, see `salesforce-mobile-emulator-qa`, which runs the Salesforce mobile app on an Android
+emulator.
 
 **A real phone is only needed when the step is about the feature working on the device** rather than
 about a component being present: a screen flow completed by touch, an approval actually cast. Then the
